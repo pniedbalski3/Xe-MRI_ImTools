@@ -1,4 +1,4 @@
-function [R2M,SNR] = analyze_cal(cal_file)
+function [R2M,SNR,T2Star] = analyze_cal(cal_file)
 
 % Read in MRD data
 dset = ismrmrd.Dataset(cal_file,'dataset');
@@ -85,4 +85,6 @@ ylabel('NMR Signal (a.u.)')
 title(['RBC/Membrane = ' num2str(R2M,3)]);
 
 
-
+T2Star(1) = 1/(pi * disfitObj.fwhm(3))*1000; %in ms
+T2Star(2) = 1/(pi * max([disfitObj.fwhm(2),disfitObj.fwhmG(2)]))*1000; %in ms
+T2Star(3) = 1/(pi * disfitObj.fwhm(1))*1000; %in ms

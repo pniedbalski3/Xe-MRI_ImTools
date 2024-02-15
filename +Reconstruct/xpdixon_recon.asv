@@ -69,6 +69,18 @@ for i = 1:size(fid,3)
     BroadIms(:,:,:,i) = Reconstruct.broad_kern_recon(ImSize,tmpfid,tmptraj);
 end
 
+figure('Name','Gas_Image_sharp_recon');
+montage(abs(squeeze(SharpIms(:,:,:,1))))
+
+%% Outputs
+gas_hires = SharpIms(:,:,:,1);
+gas_lores = BroadIms(:,:,:,1);
+dis = BroadIms(:,:,:,3);
+gas_k = fid(:,:,1);
+dis_k = fid(:,:,3);
+
+%% Good 
+
 
 %% TODO: Add Post-dissolved spectra analysis, Flip Cal analysis
 % dsclim = [0 max(max(max(abs(SharpIms(:,:,:,3)))))];
@@ -95,31 +107,31 @@ end
 % end
 
 %% Dissolved spectra analysis
-discal_ave = double(mean(discal,2));
-Dw = double(meas.head.sample_time_us(DisCal(1)));
-
-t = (0:(length(discal_ave)-1))*Dw;
-
-GasFreq = hdr.userParameters.userParameterLong(1).value;
-DisFreq = hdr.userParameters.userParameterLong(2).value;
-
-DisFreq = DisFreq+GasFreq;
-
-chem_shift = (DisFreq-GasFreq)/GasFreq * 1e6;
-
-Rfreq_guess = GasFreq*218*1e-6 - GasFreq*chem_shift*1e-6;
-Mfreq_guess = GasFreq*197*1e-6 - GasFreq*chem_shift*1e-6;
-Gfreq_guess = GasFreq - DisFreq;
-
-disfitObj = SpecFit.NMR_TimeFit_v(discal_ave,t,[1 1 1],[Rfreq_guess Mfreq_guess Gfreq_guess],[250 200 30],[0 200 0],[0 0 0],0,length(t)); % first widths lorenzian, 2nd are gauss
-disfitObj = disfitObj.fitTimeDomainSignal();
-
-disfitFinal = Dw*fftshift(fft(disfitObj.calcComponentTimeDomainSignal(t),[],1),1);
-
-RBCspec = disfitObj.area(1);
-Memspec = disfitObj.area(2);
-
-R2M = RBCspec/Memspec;
+% discal_ave = double(mean(discal,2));
+% Dw = double(meas.head.sample_time_us(DisCal(1)));
+% 
+% t = (0:(length(discal_ave)-1))*Dw;
+% 
+% GasFreq = hdr.userParameters.userParameterLong(1).value;
+% DisFreq = hdr.userParameters.userParameterLong(2).value;
+% 
+% DisFreq = DisFreq+GasFreq;
+% 
+% chem_shift = (DisFreq-GasFreq)/GasFreq * 1e6;
+% 
+% Rfreq_guess = GasFreq*218*1e-6 - GasFreq*chem_shift*1e-6;
+% Mfreq_guess = GasFreq*197*1e-6 - GasFreq*chem_shift*1e-6;
+% Gfreq_guess = GasFreq - DisFreq;
+% 
+% disfitObj = SpecFit.NMR_TimeFit_v(discal_ave,t,[1 1 1],[Rfreq_guess Mfreq_guess Gfreq_guess],[250 200 30],[0 200 0],[0 0 0],0,length(t)); % first widths lorenzian, 2nd are gauss
+% disfitObj = disfitObj.fitTimeDomainSignal();
+% 
+% disfitFinal = Dw*fftshift(fft(disfitObj.calcComponentTimeDomainSignal(t),[],1),1);
+% 
+% RBCspec = disfitObj.area(1);
+% Memspec = disfitObj.area(2);
+% 
+% R2M = RBCspec/Memspec;
 
 % figure('Name','Calibration Check');
 % plot(disfitObj.f,abs(disfitObj.spectralDomainSignal),'k');
@@ -130,85 +142,81 @@ R2M = RBCspec/Memspec;
 % title(['RBC/Membrane = ' num2str(R2M,3)]);
 
 %% Gas Flip Cal Analysis
-Amps = max(abs(facal));
-
-fitfunct = @(coefs,xdata)coefs(1)*cos(coefs(2)).^(xdata-1);   % cos theta decay
-guess(1)=max(Amps);
-guess(2)=20*pi/180;       % just guess 10 degrees
-
-xdata=1:length(Amps);
-ydata = Amps;
-
-fitoptions = optimoptions('lsqcurvefit','Display','off');
-[fitparams,resnorm,residual,exitflag,output,lambda,jacobian]  = lsqcurvefit(fitfunct,guess,xdata,ydata,[],[],fitoptions);
-ci = nlparci(fitparams,residual,jacobian);  % returns 95% conf intervals on fitparams by default
-param_err=fitparams-ci(:,1)';
-flip_angle=abs(fitparams(2)*180/pi);
-flip_err=param_err(2)*180/pi;
+% Amps = max(abs(facal));
+% 
+% fitfunct = @(coefs,xdata)coefs(1)*cos(coefs(2)).^(xdata-1);   % cos theta decay
+% guess(1)=max(Amps);
+% guess(2)=20*pi/180;       % just guess 10 degrees
+% 
+% xdata=1:length(Amps);
+% ydata = Amps;
+% 
+% fitoptions = optimoptions('lsqcurvefit','Display','off');
+% [fitparams,resnorm,residual,exitflag,output,lambda,jacobian]  = lsqcurvefit(fitfunct,guess,xdata,ydata,[],[],fitoptions);
+% ci = nlparci(fitparams,residual,jacobian);  % returns 95% conf intervals on fitparams by default
+% param_err=fitparams-ci(:,1)';
+% flip_angle=abs(fitparams(2)*180/pi);
+% flip_err=param_err(2)*180/pi;
 
 %% Gas Contamination Correction
 %Code adapted from Andrew Hahn/Sean Fain
+% 
+% Dw = meas.head.sample_time_us(1)*1e-6;
+% t_arm = double(0:Dw:((size(fid,1)-1)*Dw));
+% 
+% %t_thresh = 0.003;  % use the data collected after 3ms for correction
+% GasFreq = hdr.userParameters.userParameterLong(1).value;
+% DisFreq = hdr.userParameters.userParameterLong(2).value;
+% 
+% DisFreq = GasFreq+DisFreq;
+% 
+% demod_freq = GasFreq-DisFreq;  % acquisistion frequency difference between gas and dissolved
+% 
+% % tC = double((1:size(d,2)).*t(1));   % acquisition times for correction 
+% % tF = tC(tC >= t_thresh);     % acquisition times for fitting
+% % gas_views = d(gpv,tC >= t_thresh);  % gas phase data valid for fitting
+% % dissolved_views = d(dpv,tC >= t_thresh);    % dissolved phase data valid for fitting
+% 
+% t_gas1 = hdr.sequenceParameters.TE(1)*1e-3 + t_arm';
+% t_gas2 = hdr.sequenceParameters.TE(2)*1e-3 + t_arm';
+% t_dis1 = hdr.sequenceParameters.TE(3)*1e-3 + t_arm';
+% t_dis2 = hdr.sequenceParameters.TE(4)*1e-3 + t_arm';
+% t_dis3 = hdr.sequenceParameters.TE(5)*1e-3 + t_arm';
+% 
+% % nonlinear optimization options
+% fitOptions = optimoptions('lsqcurvefit');
+% fitOptions.Display = 'iter';
+% fitOptions.MaxIter = 10000;
+% fitOptions.TolFun=1E-16;
+% fitOptions.TolX = 1E-15;
+% fitOptions.FinDiffType = 'central';
+% fitOptions.Algorithm = 'trust-region-reflective';
+% fitOptions.MaxFunEvals = 5000;
+% 
+% % Objective function for data after echo 1, used for estimation of
+% % correction parameters
+% fun = @(beta,X) X.*exp(2i.*pi.*(beta - repmat(t_dis3, [1 size(fid,2)]).*(demod_freq)));
+% beta0 = 1i.*log(2)/2/pi + 1-2*rand(1);
+% beta_fit = lsqcurvefit(fun,beta0,double(fid(:,:,2)), double(fid(:,:,5)),[],[],fitOptions);
+% 
+% % Objective funcion for all data, used for applying the correction
+% fun = @(beta,X) X.*exp(2i.*pi.*(beta - repmat(t_dis1, [1 size(fid,2)]).*(demod_freq)));
+% disfid_corrected = fid(:,:,3) - fun(beta_fit,fid(:,:,1));   % The variable d now contains contamination corrected data
+% 
+% %% Reconstruct Corrected:
+% tmpfid = reshape(disfid_corrected,1,[])';
+% tmptraj = [reshape(traj(1,:,:,1),1,[])' reshape(traj(2,:,:,1),1,[])' reshape(traj(3,:,:,1),1,[])'];
+% 
+% SharpDis_Cor = Reconstruct.sharp_kern_recon(ImSize,tmpfid,tmptraj);
+% BroadDis_Cor = Reconstruct.broad_kern_recon(ImSize,tmpfid,tmptraj);
+% 
+% %% See how this changes
+% % SNR_Dis = QC.basic_snr(squeeze(BroadIms(:,:,:,3)),'Uncorrected Dissolved');
+% % SNR_DisCor = QC.basic_snr(squeeze(BroadDis_Cor),'Corrected Dissolved');
+% 
+% 
+% %%
 
-Dw = meas.head.sample_time_us(1)*1e-6;
-t_arm = double(0:Dw:((size(fid,1)-1)*Dw));
 
-%t_thresh = 0.003;  % use the data collected after 3ms for correction
-GasFreq = hdr.userParameters.userParameterLong(1).value;
-DisFreq = hdr.userParameters.userParameterLong(2).value;
-
-DisFreq = GasFreq+DisFreq;
-
-demod_freq = GasFreq-DisFreq;  % acquisistion frequency difference between gas and dissolved
-
-% tC = double((1:size(d,2)).*t(1));   % acquisition times for correction 
-% tF = tC(tC >= t_thresh);     % acquisition times for fitting
-% gas_views = d(gpv,tC >= t_thresh);  % gas phase data valid for fitting
-% dissolved_views = d(dpv,tC >= t_thresh);    % dissolved phase data valid for fitting
-
-t_gas1 = hdr.sequenceParameters.TE(1)*1e-3 + t_arm';
-t_gas2 = hdr.sequenceParameters.TE(2)*1e-3 + t_arm';
-t_dis1 = hdr.sequenceParameters.TE(3)*1e-3 + t_arm';
-t_dis2 = hdr.sequenceParameters.TE(4)*1e-3 + t_arm';
-t_dis3 = hdr.sequenceParameters.TE(5)*1e-3 + t_arm';
-
-% nonlinear optimization options
-fitOptions = optimoptions('lsqcurvefit');
-fitOptions.Display = 'iter';
-fitOptions.MaxIter = 10000;
-fitOptions.TolFun=1E-16;
-fitOptions.TolX = 1E-15;
-fitOptions.FinDiffType = 'central';
-fitOptions.Algorithm = 'trust-region-reflective';
-fitOptions.MaxFunEvals = 5000;
-
-% Objective function for data after echo 1, used for estimation of
-% correction parameters
-fun = @(beta,X) X.*exp(2i.*pi.*(beta - repmat(t_dis3, [1 size(fid,2)]).*(demod_freq)));
-beta0 = 1i.*log(2)/2/pi + 1-2*rand(1);
-beta_fit = lsqcurvefit(fun,beta0,double(fid(:,:,2)), double(fid(:,:,5)),[],[],fitOptions);
-
-% Objective funcion for all data, used for applying the correction
-fun = @(beta,X) X.*exp(2i.*pi.*(beta - repmat(t_dis1, [1 size(fid,2)]).*(demod_freq)));
-disfid_corrected = fid(:,:,3) - fun(beta_fit,fid(:,:,1));   % The variable d now contains contamination corrected data
-
-%% Reconstruct Corrected:
-tmpfid = reshape(disfid_corrected,1,[])';
-tmptraj = [reshape(traj(1,:,:,1),1,[])' reshape(traj(2,:,:,1),1,[])' reshape(traj(3,:,:,1),1,[])'];
-
-SharpDis_Cor = Reconstruct.sharp_kern_recon(ImSize,tmpfid,tmptraj);
-BroadDis_Cor = Reconstruct.broad_kern_recon(ImSize,tmpfid,tmptraj);
-
-%% See how this changes
-% SNR_Dis = QC.basic_snr(squeeze(BroadIms(:,:,:,3)),'Uncorrected Dissolved');
-% SNR_DisCor = QC.basic_snr(squeeze(BroadDis_Cor),'Corrected Dissolved');
-
-
-%%
-gas_hires = SharpIms(:,:,:,1);
-gas_lores = BroadIms(:,:,:,1);
-dis = BroadIms(:,:,:,3);
-gas_k = fid(:,:,1);
-dis_k = fid(:,:,3);
-
-Gas_FA = hdr.sequenceParameters.flipAngle_deg(1);
-Dis_FA = hdr.sequenceParameters.flipAngle_deg(2);
+% Gas_FA = hdr.sequenceParameters.flipAngle_deg(1);
+% Dis_FA = hdr.sequenceParameters.flipAngle_deg(2);

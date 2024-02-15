@@ -1,4 +1,8 @@
-function [anat,anat_k] = gxanat_recon(filename)
+function [anat,anat_k] = gxanat_recon(filename,nii_write)
+
+if nargin < 2
+    nii_write = true;
+end
 
 dset = ismrmrd.Dataset(filename,'dataset');
 hdr = ismrmrd.xml.deserialize(dset.readxml);
@@ -34,7 +38,7 @@ for i = 1:length(meas.data)
 end
 
 anat_k = FID_Array;
-
+Traj_Array = Reconstruct.traj_delay_correction(Traj_Array,2);
 %% Reconstruct Images
 %Reshape to column vectors
 Trajr = [reshape(Traj_Array(1,:,:),1,[])' reshape(Traj_Array(2,:,:),1,[])' reshape(Traj_Array(3,:,:),1,[])'];
@@ -46,6 +50,34 @@ for i = 1:size(FID_Array,3)
 end
     
 anat = sqrt(sum(Img.^2,4));
+%%
+if nii_write
+    right_path = 1;
+    [path1,~,~] = fileparts(filename);
+    while right_path 
+        [path2,~,~] = fileparts(path1);
+        check_path = dir(path2);
+        check_path = struct2cell(check_path);
+        if sum(find(strcmp(check_path(1,:),'QC')))
+            participant_folder = path1;
+            right_path = 0;
+        end
+        path1 = path2;
+    end
+    
+    folders = dir(participant_folder);
+    folders = struct2cell(folders);
+    getnames = folders(1,:);
+    myfolderind = find(contains(getnames,'sub-'));
+    bidsfolder = getnames{myfolderind};
+    
+    Subj_ID = bidsfolder(5:end);
+    
+    nii_name1 = ['sub-' Subj_ID '_anat'];
+    
+    writeanat = ReadData.mat2canon(abs(anat));
+    niftiwrite(writeanat,fullfile(participant_folder,bidsfolder,'xegx',nii_name1),'Compressed',true);
 
+end
 
 
