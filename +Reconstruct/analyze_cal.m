@@ -9,16 +9,16 @@ GasFA = hdr.sequenceParameters.flipAngle_deg(1);
 DisFA = hdr.sequenceParameters.flipAngle_deg(2);
 TE = hdr.sequenceParameters.TE;
 
-Dw = hdr.encoding.trajectoryDescription.userParameterDouble(1).value;
+%Dw = hdr.encoding.trajectoryDescription.userParameterDouble(1).value;
 
-DisFreq = hdr.encoding.trajectoryDescription.userParameterDouble(3).value;
-GasFreq = hdr.encoding.trajectoryDescription.userParameterDouble(2).value;
+DisFreqoffset = hdr.userParameters.userParameterLong(2).value;
+GasFreq = hdr.userParameters.userParameterLong(1).value;
 
-chem_shift = (DisFreq-GasFreq)/GasFreq * 1e6;
+chem_shift = DisFreqoffset/GasFreq * 1e6;
 
 Rfreq_guess = GasFreq*218*1e-6 - GasFreq*chem_shift*1e-6;
 Mfreq_guess = GasFreq*197*1e-6 - GasFreq*chem_shift*1e-6;
-Gfreq_guess = GasFreq - DisFreq;
+Gfreq_guess = -DisFreqoffset;
 
 %% Read in all data
 D = dset.readAcquisition();
@@ -37,8 +37,9 @@ end
 meas  = D.select(firstScan:D.getNumber);
 clear D;
 
+Dw = meas.head.sample_time_us(1);
 %% For now, I don't think I really care about the gas, so I can just get the dissolved spectra
-Dis_ind = find(meas.head.idx.contrast == 1);
+Dis_ind = find(meas.head.idx.contrast == 2);
 
 Dis_Spec = meas.data(Dis_ind);
 
@@ -54,7 +55,7 @@ end
 Dis_Avg = double(Dis_Avg);
 
 %% Fit spectra
-Dw = Dw*1e-6; %Convert dwell from us to s.
+Dw = double(Dw*1e-6); %Convert dwell from us to s.
 t = (0:(length(Dis_Avg)-1))*Dw;
 
 %Fit data. Element 1 is RBC, Element 2 is Membrane, Element 3 is Gas
