@@ -22,7 +22,7 @@ kernel.extent = 9*kernel.sharpness;
 overgrid_factor = 3;
 output_image_size = ImageSize;
 nDcfIter = 15;
-deapodizeImage = true();
+deapodizeImage = false();
 cropOvergriddedImage = true();
 verbose = false();
 

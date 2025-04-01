@@ -1,5 +1,6 @@
 function [center,first,last] = getimcenter(Mask)
 
+Mask(isnan(Mask)) = 0;
 sumslice = zeros(size(Mask,3));
 for i = 1:size(Mask,3)
     slice = Mask(:,:,i);

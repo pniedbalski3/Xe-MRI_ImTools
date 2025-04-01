@@ -26,8 +26,8 @@ end
 % select file
 if nargin >=1 
     [FileNames,path]=uigetfile(['*',FNE],prompt,'multiselect','on');
-elseif strcmp(FNE, '.dmc')==1;
-    [FileNames,path]=uigetfile('*.dcm',prompt,'multiselect','on');
+% elseif strcmp(FNE, '.dmc')==1
+%     [FileNames,path]=uigetfile('*.dcm',prompt,'multiselect','on');
 else        
     [FileNames,path]=uigetfile('multiselect','on'); %load other file extensions
 end

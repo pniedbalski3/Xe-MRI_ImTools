@@ -10,9 +10,13 @@ DisFA = hdr.sequenceParameters.flipAngle_deg(2);
 TE = hdr.sequenceParameters.TE;
 
 %Dw = hdr.encoding.trajectoryDescription.userParameterDouble(1).value;
-
-DisFreqoffset = hdr.userParameters.userParameterLong(2).value;
-GasFreq = hdr.userParameters.userParameterLong(1).value;
+try
+    DisFreqoffset = hdr.userParameters.userParameterLong(2).value;
+    GasFreq = hdr.userParameters.userParameterLong(1).value;
+catch
+    GasFreq = hdr.encoding.trajectoryDescription.userParameterDouble(2).value;
+    DisFreqoffset = hdr.encoding.trajectoryDescription.userParameterDouble(3).value - GasFreq;
+end
 
 chem_shift = DisFreqoffset/GasFreq * 1e6;
 
@@ -53,6 +57,13 @@ for i = 1:length(Dis_Spec)
 end
 % Need to make sure we have doubles:
 Dis_Avg = double(Dis_Avg);
+
+%Should be safe to normalize data:
+Dis_Avg = Dis_Avg/max(abs(Dis_Avg));
+
+if contains(hdr.acquisitionSystemInformation.institutionName,'Iowa')
+    Dis_Avg = conj(Dis_Avg);
+end
 
 %% Fit spectra
 Dw = double(Dw*1e-6); %Convert dwell from us to s.

@@ -65,7 +65,7 @@ anat = sqrt(sum(Img.^2,4));
 %%
 if nii_write
     if size(anat,1) ~= 64
-        anat = imresize3(anat,[64 64 64]);
+        anat = imresize3D(anat,[64 64 64]);
     end
     right_path = 1;
     [path1,~,~] = fileparts(filename);
